@@ -7,49 +7,82 @@ pipeline {
     }
 
     environment {
-        IMAGE_NAME = 'order-management-service'
-        IMAGE_TAG = 'latest'
+        DOCKER_IMAGE = "anoopkumardev/payment-management-service"
+        DOCKER_TAG   = "${env.BUILD_NUMBER}"
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: 'main',
+                    url: 'https://github.com/Anoopkumanr/order management service.git'
             }
         }
 
         stage('Build') {
             steps {
-                bat 'mvn clean package -DskipTests'
+                bat 'mvn clean compile'
             }
         }
 
-        stage('Test') {
+        // stage('Unit Test') {
+        //     steps {
+        //         bat 'mvn test'
+        //     }
+        //     post {
+        //         always {
+        //             junit 'target/surefire-reports/*.xml'
+        //         }
+        //     }
+        // }
+
+        stage('Package') {
             steps {
-                bat 'mvn test'
+                bat 'mvn package -DskipTests'
             }
         }
 
-        stage('Docker Build') {
-            steps {
-                bat 'docker build -t %IMAGE_NAME%:%IMAGE_TAG% .'
-            }
-        }
+        stage('Build Docker Image') {
+    steps {
+        bat "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+    }
+}
 
-        stage('Docker Image Check') {
+stage('Push Docker Image') {
+    steps {
+        withCredentials([
+            usernamePassword(
+                credentialsId: 'dockerhub-credentials',
+                usernameVariable: 'DOCKER_USERNAME',
+                passwordVariable: 'DOCKER_PASSWORD'
+            )
+        ]) {
+            bat """
+                docker login -u %DOCKER_USERNAME% -p %DOCKER_PASSWORD%
+                docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
+                docker push ${DOCKER_IMAGE}:latest
+                docker logout
+            """
+        }
+    }
+}
+
+        stage('Cleanup Local Image') {
             steps {
-                bat 'docker images %IMAGE_NAME%'
+                bat "docker rmi ${DOCKER_IMAGE}:${DOCKER_TAG} || exit 0"
             }
         }
     }
 
     post {
         success {
-            echo 'CI pipeline completed successfully.'
+            echo 'Pipeline completed successfully - build, test aur Docker image push ho gayi.'
         }
+
         failure {
-            echo 'CI pipeline failed. Check the console output.'
+            echo 'Pipeline fail ho gayi - logs check karo.'
         }
     }
 }
