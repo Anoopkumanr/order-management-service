@@ -10,6 +10,8 @@ RUN mvn clean package -DskipTests
 # Runtime stage
 FROM eclipse-temurin:21-jre
 WORKDIR /app
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
 
 COPY --from=build /app/target/order-management-service-0.0.1-SNAPSHOT.jar app.jar
 
