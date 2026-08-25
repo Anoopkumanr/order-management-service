@@ -16,7 +16,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/Anoopkumanr/order management service.git'
+                    url: 'https://github.com/Anoopkumanr/order-management-service.git'
             }
         }
 
